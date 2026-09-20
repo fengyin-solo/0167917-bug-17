@@ -14,6 +14,14 @@ export interface SubtitleEntry {
   isActive: boolean;
 }
 
+// 语音识别状态
+export type RecognitionStatus =
+  | 'idle' // 未开启识别
+  | 'listening' // 正常识别中
+  | 'interrupted' // 识别被浏览器打断
+  | 'network-error' // 网络连接断开
+  | 'no-result'; // 长时间没有识别结果
+
 // 翻译结果
 export interface TranslationResult {
   id: string;
@@ -80,6 +88,7 @@ export interface AppState {
   // 字幕
   subtitles: SubtitleEntry[];
   currentSubtitle: string;
+  recognitionStatus: RecognitionStatus;
   
   // 翻译
   inputText: string;
@@ -99,6 +108,7 @@ export interface AppState {
   setAudioSettings: (settings: Partial<AudioSettings>) => void;
   addSubtitle: (original: string, translated: string) => void;
   setCurrentSubtitle: (text: string) => void;
+  setRecognitionStatus: (status: RecognitionStatus) => void;
   setInputText: (text: string) => void;
   translate: () => Promise<void>;
   addToast: (type: ToastType, message: string) => void;

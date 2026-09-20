@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AppState, ToastType, AudioSettings, SessionRecord } from '@/types';
+import type { AppState, ToastType, AudioSettings, SessionRecord, RecognitionStatus } from '@/types';
 import { generateId } from '@/utils/helpers';
 import { DEFAULT_AUDIO_SETTINGS, TOAST_DURATION } from '@/utils/constants';
 
@@ -40,6 +40,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // 字幕状态 - 初始为空
   subtitles: [],
   currentSubtitle: '',
+  recognitionStatus: 'idle',
   
   // 翻译状态
   inputText: '',
@@ -101,6 +102,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   setCurrentSubtitle: (text: string) => {
     set({ currentSubtitle: text });
+  },
+
+  setRecognitionStatus: (status: RecognitionStatus) => {
+    set({ recognitionStatus: status });
   },
   
   setInputText: (text: string) => {
