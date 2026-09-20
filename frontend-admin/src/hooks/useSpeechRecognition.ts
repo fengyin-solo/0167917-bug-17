@@ -249,6 +249,7 @@ export const useSpeechRecognition = () => {
 
       recognition.onstart = () => {
         console.log('[语音识别] ✅ 已启动');
+        useAppStore.getState().setRecognitionStatus('listening');
         useAppStore.getState().addToast('success', '请说话...');
       };
 
@@ -271,10 +272,12 @@ export const useSpeechRecognition = () => {
 
       recognition.onnomatch = () => {
         console.log('[语音识别] ❓ 无法识别');
+        useAppStore.getState().setRecognitionStatus('no-result');
       };
 
       recognition.onresult = (event: SpeechRecognitionEvent) => {
         resultReceivedRef.current = true;
+        useAppStore.getState().setRecognitionStatus('listening');
         console.log('[语音识别] 📝 ===== 收到结果 =====');
         
         const store = useAppStore.getState();
@@ -321,15 +324,35 @@ export const useSpeechRecognition = () => {
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error('[语音识别] ❌ 错误:', event.error);
-        
-        if (event.error === 'not-allowed') {
-          useAppStore.getState().addToast('error', '请允许麦克风权限');
+        const store = useAppStore.getState();
+
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          // 权限被拒绝：识别被浏览器打断
+          store.setRecognitionStatus('interrupted');
+          store.addToast('error', '麦克风权限被拒绝，请在浏览器设置中允许后重新开启');
+          shouldRestartRef.current = false;
+        } else if (event.error === 'audio-capture') {
+          // 找不到麦克风设备：识别被浏览器打断
+          store.setRecognitionStatus('interrupted');
+          store.addToast('error', '未检测到麦克风设备，请连接设备后重新开启');
+          shouldRestartRef.current = false;
+        } else if (event.error === 'aborted') {
+          // 主动停止时也会触发 aborted，仅非主动停止才视为被浏览器打断
+          if (shouldRestartRef.current) {
+            store.setRecognitionStatus('interrupted');
+            store.addToast('warning', '识别被浏览器打断，请重新开启麦克风');
+            shouldRestartRef.current = false;
+          }
+        } else if (event.error === 'network') {
+          // 网络断开：停止自动重启，避免提示刷屏，等待用户检查网络后重新开启
+          console.log('[语音识别] ⚠️ 网络错误');
+          store.setRecognitionStatus('network-error');
+          store.addToast('error', '网络连接已断开，请检查网络后重新开启麦克风');
           shouldRestartRef.current = false;
         } else if (event.error === 'no-speech') {
+          // 一直没有结果：不弹 toast（会持续重启），仅在状态区提示
           console.log('[语音识别] 未检测到语音');
-        } else if (event.error === 'network') {
-          console.log('[语音识别] ⚠️ 网络错误');
-          useAppStore.getState().addToast('warning', '需要网络连接');
+          store.setRecognitionStatus('no-result');
         }
       };
 
@@ -338,10 +361,11 @@ export const useSpeechRecognition = () => {
         console.log('[语音识别] speechDetected:', speechDetectedRef.current);
         console.log('[语音识别] resultReceived:', resultReceivedRef.current);
         
-        // 如果检测到语音但没有结果，说明可能是网络问题
+        // 如果检测到语音但没有结果，说明一直没有识别出内容
         if (speechDetectedRef.current && !resultReceivedRef.current) {
-          console.log('[语音识别] ⚠️ 检测到语音但无结果，可能是网络问题');
-          useAppStore.getState().addToast('warning', '语音已检测但无法识别，请检查网络');
+          console.log('[语音识别] ⚠️ 检测到语音但无结果');
+          useAppStore.getState().setRecognitionStatus('no-result');
+          useAppStore.getState().addToast('warning', '检测到语音但未识别出内容，请靠近麦克风、用源语言清晰说话');
         }
         
         // 重置状态
@@ -378,6 +402,7 @@ export const useSpeechRecognition = () => {
         recognitionRef.current = null;
       }
       useAppStore.getState().setCurrentSubtitle('');
+      useAppStore.getState().setRecognitionStatus('idle');
     }
 
     return () => {

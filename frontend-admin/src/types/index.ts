@@ -40,6 +40,19 @@ export interface ControlPanelState {
   audioSettings: AudioSettings;
 }
 
+// 语音识别状态
+// idle: 空闲（未开启或内容为空）
+// listening: 正在识别
+// interrupted: 识别被浏览器打断（权限被拒、设备缺失、被中止）
+// network-error: 网络断开
+// no-result: 一直没有识别到结果
+export type RecognitionStatus =
+  | 'idle'
+  | 'listening'
+  | 'interrupted'
+  | 'network-error'
+  | 'no-result';
+
 // Toast 类型
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -80,6 +93,7 @@ export interface AppState {
   // 字幕
   subtitles: SubtitleEntry[];
   currentSubtitle: string;
+  recognitionStatus: RecognitionStatus;
   
   // 翻译
   inputText: string;
@@ -99,6 +113,7 @@ export interface AppState {
   setAudioSettings: (settings: Partial<AudioSettings>) => void;
   addSubtitle: (original: string, translated: string) => void;
   setCurrentSubtitle: (text: string) => void;
+  setRecognitionStatus: (status: RecognitionStatus) => void;
   setInputText: (text: string) => void;
   translate: () => Promise<void>;
   addToast: (type: ToastType, message: string) => void;
